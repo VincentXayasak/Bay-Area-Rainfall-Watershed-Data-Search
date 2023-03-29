@@ -147,4 +147,5 @@ class UI:
             print("\nMenu:\n1. Find Precipitation For A Watershed During A Time Period\n2. Find All Data For A Watershed\n3. Display Watersheds Ranked During A Time Period\n4. Display Sensors Ranked During A Time Period\n5. Quit\n")
             inp = input("Enter Choice: ")
 
-UI().run()
+if __name__ == "__main__":
+    UI().run()
