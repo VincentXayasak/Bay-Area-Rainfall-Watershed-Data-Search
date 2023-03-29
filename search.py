@@ -1,4 +1,4 @@
-import requests #pip install requests
+import requests 
 import re
 from watershed import Watershed
 
