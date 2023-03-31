@@ -17,7 +17,7 @@ class Search():
         else:
             raise requests.exceptions.HTTPError()
 
-        #Needed to adjust time for daylight savings.
+        #24 Hour Time To 12 Hour Times (PST Without Daylight Savings)
         self.date = re.search(r"[^T]+", data[0]["timestamp"]).group()
         self.time = re.search(r"\d+:\d+", data[0]["timestamp"]).group()
         if int(self.time[:2]) > 12:
