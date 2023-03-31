@@ -20,14 +20,14 @@ class Search():
         #Needed to adjust time for daylight savings.
         self.date = re.search(r"[^T]+", data[0]["timestamp"]).group()
         self.time = re.search(r"\d+:\d+", data[0]["timestamp"]).group()
-        if self.time[:2] == "23":
+        if int(self.time[:2]) > 12:
+            self.time = self.time.replace(self.time[:2], str(int(self.time[:2])-12), 1) + " pm"
+        elif self.time[:2] == "12":
+            self.time = self.time + " pm"
+        elif self.time[:2] == "00":
             self.time = self.time.replace(self.time[:2], "12", 1) + " am"
-        elif int(self.time[:2]) >= 12:
-            self.time = self.time.replace(self.time[:2], str(int(self.time[:2])-11), 1) + " pm"
-        elif self.time[:2] == "11":
-            self.time = self.time.replace(self.time[:2], "12", 1) + " pm"
         else:
-            self.time = self.time.replace(self.time[:2], str(int(self.time[:2])+1), 1) + " am"
+            self.time = self.time + " am"
 
         self.watershedDict = {}
         for d in data:
@@ -37,7 +37,7 @@ class Search():
                 self.watershedDict[d["watershed"]] = Watershed(**d)
     
     def __repr__(self):
-        return "\nBay Area Watershed Data Search As Of " + self.date + " " + self.time
+        return "\nBay Area Watershed Data Search As Of " + self.date + " " + self.time + " (PST Without Daylight Savings)"
         
     def getWatershedPrecipitation(self, watershedName, range):
         """
