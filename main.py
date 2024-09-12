@@ -1,151 +1,107 @@
-import requests
+import tkinter as tk
+from tkinter import ttk, messagebox
 from search import Search
 
-class UI:
-    """
-    Class that interacts with user.
-    """
-
+class WatershedApp(tk.Tk):
     def __init__(self):
+        super().__init__()
+        self.title("Watershed Precipitation Data")
+        self.geometry("600x400")
+        
         try:
             self.search = Search()
         except requests.exceptions.HTTPError:
-            raise SystemExit("Status Unavailable Right Now.")
-        print(self.search)
+            messagebox.showerror("Error", "Status Unavailable Right Now.")
+            self.destroy()
+            return
+        
+        self.create_widgets()
 
-        wsList = list(self.search.getWatersheds())
-        print("Watersheds: "+", ".join(wsList))
-        self.watershedLookup = {}
-        for i in range(len(wsList)):
-            self.watershedLookup[i+1] = wsList[i]
-        self.rangeLookup = {1:"1 Hour Ago", 2:"3 Hours Ago", 3:"6 Hours Ago", 4:"12 Hours Ago", 5:"24 Hours Ago", 6:"Year To Date"}
+    def create_widgets(self):
+        # Dropdown for selecting a watershed
+        self.watershed_label = ttk.Label(self, text="Select a Watershed:")
+        self.watershed_label.pack(pady=10)
+
+        self.wsList = list(self.search.getWatersheds())
+        self.watershed_var = tk.StringVar()
+        self.watershed_dropdown = ttk.Combobox(self, textvariable=self.watershed_var, values=self.wsList)
+        self.watershed_dropdown.pack()
+
+        # Dropdown for selecting a time range
+        self.range_label = ttk.Label(self, text="Select a Time Range:")
+        self.range_label.pack(pady=10)
+
+        self.range_options = {
+            "1 Hour Ago": 1,
+            "3 Hours Ago": 2,
+            "6 Hours Ago": 3,
+            "12 Hours Ago": 4,
+            "24 Hours Ago": 5,
+            "Year To Date": 6
+        }
+        self.range_var = tk.StringVar()
+        self.range_dropdown = ttk.Combobox(self, textvariable=self.range_var, values=list(self.range_options.keys()))
+        self.range_dropdown.pack()
+
+        # Buttons for different actions
+        self.precipitation_button = ttk.Button(self, text="Show Precipitation", command=self.displayWatershedPrecipitation)
+        self.precipitation_button.pack(pady=10)
+
+        self.data_button = ttk.Button(self, text="Show Full Data", command=self.displayWatershedData)
+        self.data_button.pack(pady=10)
+
+        self.ranked_ws_button = ttk.Button(self, text="Rank Watersheds", command=self.displayRankedWatersheds)
+        self.ranked_ws_button.pack(pady=10)
+
+        self.ranked_sensors_button = ttk.Button(self, text="Rank Sensors", command=self.displayRankedSensors)
+        self.ranked_sensors_button.pack(pady=10)
+
+        self.quit_button = ttk.Button(self, text="Quit", command=self.quit)
+        self.quit_button.pack(pady=10)
 
     def displayWatershedPrecipitation(self):
-        """
-        Displays total watershed precipitation of a watershed during given range.
-        """
-        print()
-        for num, ws in self.watershedLookup.items():
-            print(str(num)+". "+ws)
-        inp = 0
-        while not 1 <= inp <= len(self.watershedLookup):
-            try: 
-                inp = int(input("\nWhich Watershed Do You Need Precipitation Data From? (1-"+str(len(self.watershedLookup))+"): "))
-                if not 1 <= inp <= len(self.watershedLookup):
-                    raise ValueError
-            except ValueError:
-                print("Error!", end=" ")
-        watershedName = self.watershedLookup[inp]
+        ws = self.watershed_var.get()
+        range_name = self.range_var.get()
         
-        print()
-        for num, range in self.rangeLookup.items():
-            print(str(num)+". "+range)
-        range = 0
-        while not 1 <= range <= 6:
-            try:
-                range = int(input("\nRange (1-6): "))
-                if not 1 <= range <= 6:
-                    raise ValueError
-            except ValueError:
-                print("Error!", end=" ")
-        print("\n" + watershedName + " Has Had A Total Precipitation Of",self.search.getWatershedPrecipitation(watershedName, range),"Inches From "+self.rangeLookup[range]+".")
-    
+        if ws and range_name:
+            range_val = self.range_options[range_name]
+            precipitation = self.search.getWatershedPrecipitation(ws, range_val)
+            messagebox.showinfo("Precipitation", f"{ws} has had a total precipitation of {precipitation} inches from {range_name}.")
+        else:
+            messagebox.showerror("Input Error", "Please select both a watershed and a time range.")
+
     def displayWatershedData(self):
-        """
-        Displays entire data for a watershed.
-        """
-        print()
-        for num, ws in self.watershedLookup.items():
-            print(str(num)+". "+ws)
-        inp = 0
-        while not 1 <= inp <= len(self.watershedLookup):
-            try: 
-                inp = int(input("\nFull Data From Which Watershed? (1-"+str(len(self.watershedLookup))+"): "))
-                if not 1 <= inp <= len(self.watershedLookup):
-                    raise ValueError
-            except ValueError:
-                print("Error!", end=" ")
-        watershedName = self.watershedLookup[inp]
-        print("\n"+watershedName + " Data:")
-        print("Precipitation (Inches)" + (" "*13) + "1 Hr" + (" "*2) + "3 Hr" + (" "*2) + "6 Hr" + (" "*2) + "12 Hr" + " 24 Hr" + (" "*2) + "YTD\n")
-        for sensor, dataList in self.search.getWatershedData(watershedName).items():
-            spacing1 = 35 - len(sensor)
-            print(sensor, end = (" "*spacing1))
-            for p in dataList:
-                spacing2 = 6 - len(str(p))
-                print(p, end = (" "*spacing2))
-            print("\n")
-    
-    def displayRankedWatersheds(self):
-        """
-        Displays watersheds ranked by amount of precipitation during given range.
-        """
-        print()
-        for num, range in self.rangeLookup.items():
-            print(str(num)+". "+range)
-        range = 0
-        while not 1 <= range <= 6:
-            try:
-                range = int(input("\nRange (1-6): "))
-                if not 1 <= range <= 6:
-                    raise ValueError
-            except ValueError:
-                print("Error!", end=" ")
-        print("\nPrecipitation (Inches) From " + self.rangeLookup[range] + ":\n")
-        count = 1
-        for watershed, precipitation in self.search.rankPrecipitation(range).items():
-            spacing = 20 - len(watershed)
-            print(str(count) + ". " + watershed + (" "*spacing) + str(precipitation) + "\n")
-            count += 1
-    
-    def displayRankedSensors(self):
-        """
-        Displays each sensor one by one ranked by amount of precipitation during a given range.
-        """
-        print()
-        for num, range in self.rangeLookup.items():
-            print(str(num)+". "+range)
-        range = 0
-        while not 1 <= range <= 6:
-            try:
-                range = int(input("\nRange (1-6): "))
-                if not 1 <= range <= 6:
-                    raise ValueError
-            except ValueError:
-                print("Error!", end=" ")
-        rankedGenerator = self.search.rankSensors(range)
-        count = 1
-        print("\nSensors' Precipitation (Inches) Ranked From " + self.rangeLookup[range] + ":\n")
-        print("Click Enter Key To Keep Displaying Sensors\n")
-        inp = ""
-        while inp == "":
-            try:
-                sensor, precipitation = next(rankedGenerator)
-            except StopIteration:
-                print("No More Sensors\n")
-                break
-            if not count >= 10:
-                spacing = 35 - len(sensor)
-            else:
-                spacing = 34 - len(sensor)
-            print(str(count) + ". " + sensor + (" "*spacing) + str(precipitation))
-            count += 1
-            inp = input()
+        ws = self.watershed_var.get()
         
-    def run(self):
-        """
-        Displays menu and calls functions.
-        """
-        menu = {"1":self.displayWatershedPrecipitation, "2":self.displayWatershedData, "3":self.displayRankedWatersheds, "4":self.displayRankedSensors}
-        print("\nMenu:\n1. Find Precipitation For A Watershed During A Time Period\n2. Find All Data For A Watershed\n3. Display Watersheds Ranked During A Time Period\n4. Display Sensors Ranked During A Time Period\n5. Quit\n")
-        inp = input("Enter Choice: ")
-        while inp != "5":
-            try:
-                menu[inp]()
-            except KeyError:
-                print("\nError!")
-            print("\nMenu:\n1. Find Precipitation For A Watershed During A Time Period\n2. Find All Data For A Watershed\n3. Display Watersheds Ranked During A Time Period\n4. Display Sensors Ranked During A Time Period\n5. Quit\n")
-            inp = input("Enter Choice: ")
+        if ws:
+            data = self.search.getWatershedData(ws)
+            data_string = "\n".join([f"{sensor}: {dataList}" for sensor, dataList in data.items()])
+            messagebox.showinfo(f"{ws} Data", data_string)
+        else:
+            messagebox.showerror("Input Error", "Please select a watershed.")
+
+    def displayRankedWatersheds(self):
+        range_name = self.range_var.get()
+        
+        if range_name:
+            range_val = self.range_options[range_name]
+            ranked_ws = self.search.rankPrecipitation(range_val)
+            rank_string = "\n".join([f"{count + 1}. {ws}: {precipitation}" for count, (ws, precipitation) in enumerate(ranked_ws.items())])
+            messagebox.showinfo(f"Ranked Watersheds ({range_name})", rank_string)
+        else:
+            messagebox.showerror("Input Error", "Please select a time range.")
+
+    def displayRankedSensors(self):
+        range_name = self.range_var.get()
+        
+        if range_name:
+            range_val = self.range_options[range_name]
+            ranked_sensors = self.search.rankSensors(range_val)
+            rank_string = "\n".join([f"{count + 1}. {sensor}: {precipitation}" for count, (sensor, precipitation) in enumerate(ranked_sensors)])
+            messagebox.showinfo(f"Ranked Sensors ({range_name})", rank_string)
+        else:
+            messagebox.showerror("Input Error", "Please select a time range.")
 
 if __name__ == "__main__":
-    UI().run()
+    app = WatershedApp()
+    app.mainloop()
